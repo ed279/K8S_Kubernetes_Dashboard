@@ -1,0 +1,11 @@
+[Unit]
+Description=Run RAYCUE host companion every 15s
+
+[Timer]
+OnBootSec=10
+OnUnitActiveSec=15
+AccuracySec=1
+Persistent=false
+
+[Install]
+WantedBy=timers.target

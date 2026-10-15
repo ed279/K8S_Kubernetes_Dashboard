@@ -1,0 +1,120 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dashboard
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboard-config
+  namespace: dashboard
+data:
+  RENDER_INTERVAL: "10"
+  TZ: "America/Los_Angeles"
+  OLLAMA_PORTS: "11434,11435,11436"
+  HTTP_PORT: "8088"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: raycue-dashboard
+  namespace: dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: raycue-dashboard
+  template:
+    metadata:
+      labels:
+        app: raycue-dashboard
+    spec:
+      serviceAccountName: dashboard-sa
+      containers:
+      - name: raycue-dashboard
+        image: raycue-dashboard:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8088
+          name: http
+        envFrom:
+        - configMapRef:
+            name: dashboard-config
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8088
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8088
+          initialDelaySeconds: 10
+          periodSeconds: 5
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dashboard-sa
+  namespace: dashboard
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dashboard-reader
+rules:
+- apiGroups: [""]
+  resources: ["pods", "nodes", "services"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["pods", "nodes"]
+  verbs: ["get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dashboard-reader-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: dashboard-reader
+subjects:
+- kind: ServiceAccount
+  name: dashboard-sa
+  namespace: dashboard
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: raycue-dashboard
+  namespace: dashboard
+spec:
+  type: NodePort
+  selector:
+    app: raycue-dashboard
+  ports:
+  - port: 8088
+    targetPort: 8088
+    nodePort: 30089
+    name: http

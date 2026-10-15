@@ -1,0 +1,11 @@
+[Unit]
+Description=RAYCUE host companion (writes systemd + GPU state for dashboard container)
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/raycue-companion.sh
+User=root
+
+[Install]
+WantedBy=multi-user.target
