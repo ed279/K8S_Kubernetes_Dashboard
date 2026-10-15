@@ -10,38 +10,35 @@ metadata:
   name: dashboard-config
   namespace: dashboard
 data:
-  RENDER_INTERVAL: "10"
   TZ: "America/Los_Angeles"
-  OLLAMA_PORTS: "11434,11435,11436"
-  HTTP_PORT: "8088"
 
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: raycue-dashboard
+  name: k8s-dashboard
   namespace: dashboard
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: raycue-dashboard
+      app: k8s-dashboard
   template:
     metadata:
       labels:
-        app: raycue-dashboard
+        app: k8s-dashboard
     spec:
       serviceAccountName: dashboard-sa
       containers:
-      - name: raycue-dashboard
-        image: raycue-dashboard:latest
-        imagePullPolicy: IfNotPresent
+      - name: k8s-dashboard
+        image: localhost/k8s-dashboard:latest
+        imagePullPolicy: Never
         ports:
-        - containerPort: 8088
+        - containerPort: 5000
           name: http
-        envFrom:
-        - configMapRef:
-            name: dashboard-config
+        env:
+        - name: TZ
+          value: "America/Los_Angeles"
         resources:
           requests:
             memory: "256Mi"
@@ -51,15 +48,15 @@ spec:
             cpu: "500m"
         livenessProbe:
           httpGet:
-            path: /healthz
-            port: 8088
+            path: /health
+            port: 5000
           initialDelaySeconds: 30
           periodSeconds: 10
           failureThreshold: 3
         readinessProbe:
           httpGet:
-            path: /healthz
-            port: 8088
+            path: /health
+            port: 5000
           initialDelaySeconds: 10
           periodSeconds: 5
 
@@ -107,14 +104,14 @@ subjects:
 apiVersion: v1
 kind: Service
 metadata:
-  name: raycue-dashboard
+  name: k8s-dashboard
   namespace: dashboard
 spec:
   type: NodePort
   selector:
-    app: raycue-dashboard
+    app: k8s-dashboard
   ports:
-  - port: 8088
-    targetPort: 8088
-    nodePort: 30089
+  - port: 5000
+    targetPort: 5000
+    nodePort: 30080
     name: http

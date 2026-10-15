@@ -14,21 +14,15 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY render.py collect.py server.py k8s_alerts_enricher.py ./
+COPY k8s_dashboard_multiring.py ./
 
 ENV PYTHONUNBUFFERED=1 \
-    RENDER_INTERVAL=10 \
     TZ=America/Los_Angeles \
-    AI_ROUTER_LOG=/var/log/openclaw/ai_router.jsonl \
-    HOST_STATE=/dev/shm/cephalobot/host_state.json \
-    CLAUDE_QUOTA_PATH=/dev/shm/cephalobot/claude_quota.json \
-    DOCKER_SOCK=/var/run/docker.sock \
-    OLLAMA_PORTS=11434,11435,11436 \
-    HTTP_PORT=8088
+    FLASK_ENV=production
 
-EXPOSE 8088
+EXPOSE 5000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD curl -fsS http://localhost:8088/healthz || exit 1
+    CMD curl -fsS http://localhost:5000/health || exit 1
 
-CMD ["python3", "server.py"]
+CMD ["python3", "k8s_dashboard_multiring.py"]
