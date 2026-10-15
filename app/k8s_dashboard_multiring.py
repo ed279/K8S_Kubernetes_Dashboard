@@ -307,8 +307,8 @@ def dashboard():
         .legend-item { display: flex; align-items: center; margin-bottom: 4px; }
         .legend-color { width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
         .warning { color: #ffc107; font-size: 9px; margin-top: 8px; }
-        .trends-section { background: #1a1a1a; padding: 20px; border-radius: 6px; border: 1px solid #333; margin-bottom: 20px; }
-        .chart-container { position: relative; height: 200px; }
+        .trends-section { background: #1a1a1a; padding: 20px; border-radius: 6px; border: 1px solid #333; margin-bottom: 20px; height: 400px; display: flex; flex-direction: column; }
+        .chart-container { position: relative; flex: 1; min-height: 0; }
         .namespace { margin-bottom: 30px; }
         .namespace-title { background: #1a1a1a; padding: 12px 15px; border-left: 4px solid #007bff; margin-bottom: 10px; font-weight: 600; font-size: 13px; border-radius: 4px; }
         .pods-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
@@ -442,20 +442,20 @@ def dashboard():
                     data: {
                         labels: [],
                         datasets: [
-                            { label: 'CPU %', data: [], borderColor: '#ff9800', borderWidth: 1, tension: 0.1, fill: false },
-                            { label: 'Memory %', data: [], borderColor: '#2196f3', borderWidth: 1, tension: 0.1, fill: false },
-                            { label: 'Pods', data: [], borderColor: '#4caf50', borderWidth: 1, tension: 0.1, fill: false }
+                            { label: 'CPU %', data: [], borderColor: '#ff9800', borderWidth: 2, tension: 0.3, fill: false },
+                            { label: 'Memory %', data: [], borderColor: '#2196f3', borderWidth: 2, tension: 0.3, fill: false },
+                            { label: 'Pods', data: [], borderColor: '#4caf50', borderWidth: 2, tension: 0.3, fill: false }
                         ]
                     },
                     options: {
-                        responsive: false,
+                        responsive: true,
                         maintainAspectRatio: false,
                         scales: {
                             y: { beginAtZero: true, max: 100, grid: { color: '#222' }, ticks: { color: '#888' } },
-                            x: { grid: { color: '#222' }, ticks: { color: '#888' } }
+                            x: { grid: { color: '#222' }, ticks: { color: '#888', maxRotation: 45, minRotation: 0 } }
                         },
                         plugins: {
-                            legend: { display: true, labels: { color: '#888', font: { size: 10 } } }
+                            legend: { display: true, labels: { color: '#888', font: { size: 12 }, padding: 15 } }
                         }
                     }
                 });
