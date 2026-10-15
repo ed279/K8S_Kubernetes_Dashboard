@@ -141,6 +141,8 @@ class Handler(BaseHTTPRequestHandler):
         .widget-raycue { grid-column: 6 / 9; grid-row: 1 / 3; background: linear-gradient(135deg, rgba(200, 100, 100, 0.1), rgba(255, 150, 150, 0.05)); border: 1px solid rgba(200, 100, 100, 0.2); }
         .widget-health { grid-column: 6 / 9; grid-row: 3 / 5; background: linear-gradient(135deg, rgba(100, 200, 200, 0.1), rgba(150, 255, 255, 0.05)); border: 1px solid rgba(100, 200, 200, 0.2); }
         .widget-services { grid-column: 9 / 12; grid-row: 5 / 7; background: linear-gradient(135deg, rgba(200, 200, 100, 0.1), rgba(255, 255, 150, 0.05)); border: 1px solid rgba(200, 200, 100, 0.2); }
+        .widget-docker { grid-column: 1 / 3; grid-row: 5 / 7; background: linear-gradient(135deg, rgba(255, 140, 30, 0.15), rgba(255, 180, 60, 0.05)); border: 1px solid rgba(255, 140, 30, 0.3); }
+        .widget-systemd { grid-column: 3 / 6; grid-row: 5 / 7; background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(200, 130, 255, 0.05)); border: 1px solid rgba(168, 85, 247, 0.3); }
         .widget-alerts { grid-column: 3 / 9; grid-row: 4 / 6; background: linear-gradient(135deg, rgba(255, 100, 100, 0.1), rgba(255, 150, 150, 0.05)); border: 1px solid rgba(255, 100, 100, 0.3); }
         .alerts-container { width: 100%; max-height: 100%; overflow-y: auto; font-size: 11px; }
         .alert-item { background: rgba(0, 0, 0, 0.3); border-left: 3px solid #f87171; padding: 8px 12px; margin-bottom: 6px; border-radius: 4px; cursor: pointer; user-select: none; }
@@ -264,6 +266,23 @@ class Handler(BaseHTTPRequestHandler):
                 </div>
             </div>
         </div>
+        <div class="widget widget-docker">
+            <div class="widget-title">🐳 Docker Containers</div>
+            <div class="widget-content">
+                <div style="width: 100%; text-align: center;">
+                    <div style="font-size: 28px; font-weight: 700; color: #ff8c1e; margin-bottom: 8px;" id="docker-count">0</div>
+                    <div style="font-size: 11px; color: #888;">Non-K8s containers</div>
+                </div>
+            </div>
+        </div>
+        <div class="widget widget-systemd">
+            <div class="widget-title">⚙️ Systemd Services</div>
+            <div class="widget-content">
+                <div style="width: 100%; font-size: 11px; line-height: 1.8;" id="systemd-services">
+                    <div style="color: #888; text-align: center; padding: 20px;">Loading...</div>
+                </div>
+            </div>
+        </div>
         <div class="widget widget-alerts">
             <div class="widget-title">⚠️ K8s Alerts & Pod Endpoints</div>
             <div class="widget-content">
@@ -376,9 +395,39 @@ class Handler(BaseHTTPRequestHandler):
             container.innerHTML = html;
         }
 
+        async function fetchDashboardState() {
+            try {
+                const response = await fetch('/state.json');
+                const state = await response.json();
+
+                // Update Docker count
+                const dockerCount = state.docker_count || 0;
+                document.getElementById('docker-count').textContent = dockerCount;
+
+                // Update Systemd services
+                const systemdServices = state.systemd_services || [];
+                let systemdHtml = '';
+                if (systemdServices.length === 0) {
+                    systemdHtml = '<div style="color: #4ade80; text-align: center; padding: 20px; font-size: 11px;">✅ No in-house services</div>';
+                } else {
+                    systemdServices.forEach(svc => {
+                        const status = svc.status === 'running' || svc.status === 'active' ? 'healthy' : 'offline';
+                        systemdHtml += `<div class="status-item"><span><span class="status-indicator ${status}"></span>${svc.name}</span><span style="font-size: 10px; color: #888;">${svc.status}</span></div>`;
+                    });
+                }
+                document.getElementById('systemd-services').innerHTML = systemdHtml;
+            } catch (e) {
+                console.error('State fetch failed:', e);
+            }
+        }
+
         // Initialize refresh
         fetchAlerts();
-        refreshTimer = setInterval(fetchAlerts, refreshInterval);
+        fetchDashboardState();
+        refreshTimer = setInterval(() => {
+            fetchAlerts();
+            fetchDashboardState();
+        }, refreshInterval);
 
         // Cleanup on page unload
         window.addEventListener('beforeunload', () => {
