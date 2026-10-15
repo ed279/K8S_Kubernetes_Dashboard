@@ -345,16 +345,17 @@ def dashboard():
                         data: [r.value, 100 - r.value],
                         backgroundColor: [r.color, '#333'],
                         borderColor: '#1a1a1a',
-                        borderWidth: 2,
+                        borderWidth: 1,
                         borderRadius: 0
                     }))
                 },
                 options: {
-                    responsive: true,
+                    responsive: false,
+                    maintainAspectRatio: false,
                     circumference: 360,
                     rotation: 0,
                     plugins: { legend: { display: false }, tooltip: { enabled: false } },
-                    cutout: ['75%', '60%', '45%']
+                    cutout: '60%'
                 }
             });
         }
