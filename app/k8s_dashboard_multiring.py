@@ -240,7 +240,7 @@ def dashboard():
 <html>
 <head>
     <title>K8s Dashboard - NUCUBT01</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0f0f0f; color: #e0e0e0; }
@@ -311,23 +311,23 @@ def dashboard():
         <div class="metrics-row">
             <div class="metric-card">
                 <div class="metric-title">CPU</div>
-                <div class="metric-donut"><canvas id="cpuChart"></canvas></div>
+                <div class="metric-donut"><canvas id="cpuChart" width="140" height="140"></canvas></div>
                 <div class="metric-legend" id="cpu-legend"></div>
             </div>
             <div class="metric-card">
                 <div class="metric-title">Memory</div>
-                <div class="metric-donut"><canvas id="memoryChart"></canvas></div>
+                <div class="metric-donut"><canvas id="memoryChart" width="140" height="140"></canvas></div>
                 <div class="metric-legend" id="memory-legend"></div>
             </div>
             <div class="metric-card">
                 <div class="metric-title">Pods</div>
-                <div class="metric-donut"><canvas id="podsChart"></canvas></div>
+                <div class="metric-donut"><canvas id="podsChart" width="140" height="140"></canvas></div>
                 <div class="metric-legend" id="pods-legend"></div>
             </div>
         </div>
         <div class="trends-section">
             <div style="font-size: 14px; font-weight: 600; margin-bottom: 15px;">📊 Trends (5 min)</div>
-            <div class="chart-container"><canvas id="trendsChart"></canvas></div>
+            <div class="chart-container"><canvas id="trendsChart" width="800" height="200"></canvas></div>
         </div>
         <div id="dashboard"></div>
         <div class="refresh-time">Updated: <span id="refresh-time">--:--:--</span></div>
@@ -460,7 +460,6 @@ def dashboard():
                 }
                 document.getElementById('dashboard').innerHTML = pods;
                 document.getElementById('refresh-time').textContent = new Date().toLocaleTimeString();
-            })
             })
             .catch(err => console.error('Refresh error:', err));
         }
