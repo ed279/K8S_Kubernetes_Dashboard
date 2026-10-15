@@ -337,46 +337,74 @@ def dashboard():
         const charts = {};
 
         function createMultiRingChart(id, rings) {
-            const ctx = document.getElementById(id).getContext('2d');
-            return new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    datasets: rings.map(r => ({
-                        data: [r.value, 100 - r.value],
-                        backgroundColor: [r.color, '#333'],
-                        borderColor: '#1a1a1a',
-                        borderWidth: 1,
-                        borderRadius: 0
-                    }))
-                },
-                options: {
-                    responsive: false,
-                    maintainAspectRatio: false,
-                    circumference: 360,
-                    rotation: 0,
-                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
-                    cutout: '60%'
-                }
-            });
+            const canvas = document.getElementById(id);
+            if (!canvas) return null;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return null;
+
+            try {
+                const chart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        datasets: rings.map(r => ({
+                            data: [r.value, 100 - r.value],
+                            backgroundColor: [r.color, '#444'],
+                            borderColor: '#0f0f0f',
+                            borderWidth: 0
+                        }))
+                    },
+                    options: {
+                        responsive: false,
+                        maintainAspectRatio: false,
+                        rotation: 0,
+                        circumference: 360,
+                        cutout: '60%',
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { enabled: false }
+                        }
+                    }
+                });
+                return chart;
+            } catch(e) {
+                console.error('Chart error:', e);
+                return null;
+            }
         }
 
         function createTrendsChart() {
-            return new Chart(document.getElementById('trendsChart').getContext('2d'), {
-                type: 'line',
-                data: { labels: [], datasets: [
-                    { label: 'CPU %', data: [], borderColor: '#ff9800', borderWidth: 2, tension: 0.1 },
-                    { label: 'Memory %', data: [], borderColor: '#2196f3', borderWidth: 2, tension: 0.1 },
-                    { label: 'Pods', data: [], borderColor: '#4caf50', borderWidth: 2, tension: 0.1, yAxisID: 'y1' }
-                ]},
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true, max: 100, grid: { color: '#333' } },
-                        y1: { type: 'linear', position: 'right', max: 120, grid: { drawOnChartArea: false } },
-                        x: { grid: { color: '#333' } }
+            const canvas = document.getElementById('trendsChart');
+            if (!canvas) return null;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return null;
+
+            try {
+                return new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [
+                            { label: 'CPU %', data: [], borderColor: '#ff9800', borderWidth: 1, tension: 0.1, fill: false },
+                            { label: 'Memory %', data: [], borderColor: '#2196f3', borderWidth: 1, tension: 0.1, fill: false },
+                            { label: 'Pods', data: [], borderColor: '#4caf50', borderWidth: 1, tension: 0.1, fill: false }
+                        ]
+                    },
+                    options: {
+                        responsive: false,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: true, max: 100, grid: { color: '#222' }, ticks: { color: '#888' } },
+                            x: { grid: { color: '#222' }, ticks: { color: '#888' } }
+                        },
+                        plugins: {
+                            legend: { display: true, labels: { color: '#888', font: { size: 10 } } }
+                        }
                     }
-                }
-            });
+                });
+            } catch(e) {
+                console.error('Trends chart error:', e);
+                return null;
+            }
         }
 
         function renderMetrics(data) {
