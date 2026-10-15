@@ -544,6 +544,16 @@ def collect_state() -> dict:
             dyn_tier_models[t] = label
             seen.add(t)
 
+    # Count Docker containers (non-K8s-migrated)
+    docker_count = len([c for c in containers if not c.get("k8s", False)])
+
+    # Filter in-house systemd services (exclude ubuntu/linux standard services)
+    in_house_services = [
+        s for s in host.get("services", [])
+        if s.get("name", "").startswith("openclaw-") or s.get("name", "").startswith("cephalobot-")
+    ]
+    systemd_count = len(in_house_services)
+
     state = {
         "collected_at": _dt.datetime.now().isoformat(timespec="seconds"),
         "ssh_ok": True,
@@ -556,6 +566,9 @@ def collect_state() -> dict:
         "containers": containers,
         "k8s_pods": k8s_pods,
         "services": host.get("services", []),
+        "docker_count": docker_count,
+        "systemd_services": in_house_services,
+        "systemd_count": systemd_count,
         "shp": shp_state,  # Service Health Protocol state (semantic tier colors)
         "backlog": backlog,  # burn-down: current counts + spark_pending (last 8 daily readings)
         "load": metrics["load"],
