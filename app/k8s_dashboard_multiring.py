@@ -4,6 +4,7 @@ from flask import Flask, render_template_string, jsonify
 from flask_cors import CORS
 import json
 import requests
+import subprocess
 from datetime import datetime
 from collections import deque
 from kubernetes import client, config, watch
@@ -99,6 +100,53 @@ def get_ollama_pods():
         print(f"Error in get_ollama_pods: {e}")
         import traceback
         traceback.print_exc()
+        return []
+
+def get_docker_containers():
+    """Get non-K8s Docker containers"""
+    try:
+        result = subprocess.run(['docker', 'ps', '--format', '{{json .}}'],
+                              capture_output=True, text=True, timeout=5)
+        containers = []
+        if result.returncode == 0:
+            for line in result.stdout.strip().split('\n'):
+                if line:
+                    data = json.loads(line)
+                    # Skip k8s containers
+                    if 'k8s_' not in data.get('Names', ''):
+                        containers.append({
+                            'name': data.get('Names', 'unknown'),
+                            'image': data.get('Image', 'unknown'),
+                            'status': data.get('Status', 'unknown'),
+                            'state': 'Running' if 'Up' in data.get('Status', '') else 'Stopped'
+                        })
+        return containers
+    except Exception as e:
+        print(f"Docker error: {e}", file=sys.stderr)
+        return []
+
+def get_systemd_services():
+    """Get custom systemd services (openclaw, cephalobot, kiwix, etc)"""
+    try:
+        result = subprocess.run(['systemctl', 'list-units', '--type=service', '--all', '--no-pager', '--output=json'],
+                              capture_output=True, text=True, timeout=5)
+        services = []
+        if result.returncode == 0:
+            data = json.loads(result.stdout)
+            custom_prefixes = ['openclaw-', 'cephalobot-', 'kiwix', 'vaultwarden', 'kraken', 'tesseract', 'grinder']
+            for svc in data:
+                name = svc.get('unit', '')
+                if name.endswith('.service'):
+                    service_name = name[:-8]  # Remove .service
+                    if any(service_name.startswith(prefix) for prefix in custom_prefixes):
+                        services.append({
+                            'name': service_name,
+                            'state': svc.get('active', 'unknown'),
+                            'sub_state': svc.get('sub', 'unknown')
+                        })
+        return services
+    except Exception as e:
+        print(f"Systemd error: {e}", file=sys.stderr)
         return []
 
 def get_cluster_metrics():
@@ -287,6 +335,14 @@ def dashboard():
         .ollama-section { background: #1a1a1a; padding: 15px; border-left: 4px solid #ff9800; margin-bottom: 20px; border-radius: 4px; }
         .ollama-title { font-size: 14px; font-weight: 600; color: #ff9800; margin-bottom: 15px; }
         .ollama-pod { background: #252525; padding: 12px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #333; }
+        .docker-section { background: #1a1a1a; padding: 15px; border-left: 4px solid #0db7ed; margin-bottom: 20px; border-radius: 4px; }
+        .docker-title { font-size: 14px; font-weight: 600; color: #0db7ed; margin-bottom: 15px; }
+        .docker-container { background: #252525; padding: 12px; margin-bottom: 8px; border-radius: 4px; border: 1px solid #333; }
+        .systemd-section { background: #1a1a1a; padding: 15px; border-left: 4px solid #8b5cf6; margin-bottom: 20px; border-radius: 4px; }
+        .systemd-title { font-size: 14px; font-weight: 600; color: #8b5cf6; margin-bottom: 15px; }
+        .systemd-service { background: #252525; padding: 12px; margin-bottom: 8px; border-radius: 4px; border: 1px solid #333; }
+        .service-state-active { color: #28a745; font-weight: 600; }
+        .service-state-inactive { color: #dc3545; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -330,8 +386,10 @@ def dashboard():
             <div class="chart-container"><canvas id="trendsChart" width="800" height="200"></canvas></div>
         </div>
         <div id="dashboard"></div>
+        <div id="docker-container"></div>
+        <div id="systemd-container"></div>
         <div class="refresh-time">Updated: <span id="refresh-time">--:--:--</span></div>
-        <div class="endpoints"><a href="/api/pods" target="_blank">pods</a><a href="/api/metrics" target="_blank">metrics</a><a href="/api/alerts" target="_blank">alerts</a><a href="/api/ollama" target="_blank">ollama</a></div>
+        <div class="endpoints"><a href="/api/pods" target="_blank">pods</a><a href="/api/metrics" target="_blank">metrics</a><a href="/api/alerts" target="_blank">alerts</a><a href="/api/ollama" target="_blank">ollama</a><a href="/api/docker" target="_blank">docker</a><a href="/api/systemd" target="_blank">systemd</a></div>
     </div>
     <script>
         const charts = {};
@@ -462,9 +520,11 @@ def dashboard():
             Promise.all([
                 fetch('/api/metrics').then(r=>r.json()).catch(e => ({error: e.message})),
                 fetch('/api/alerts').then(r=>r.json()).catch(e => []),
-                fetch('/api/pods').then(r=>r.json()).catch(e => ({}))
+                fetch('/api/pods').then(r=>r.json()).catch(e => ({})),
+                fetch('/api/docker').then(r=>r.json()).catch(e => []),
+                fetch('/api/systemd').then(r=>r.json()).catch(e => [])
             ])
-            .then(([m, a, p]) => {
+            .then(([m, a, p, docker, systemd]) => {
                 if (m && !m.error) renderMetrics(m);
                 let alerts = (a && a.length > 0) ? '<div class="alerts-section"><div class="alerts-title">⚠️ Warnings: ' + a.length + '</div>' : '';
                 if (a && a.forEach) a.forEach((al, idx) => {
@@ -488,6 +548,28 @@ def dashboard():
                     });
                 }
                 document.getElementById('dashboard').innerHTML = pods;
+
+                let dockerHtml = '';
+                if (docker && docker.length > 0) {
+                    dockerHtml = '<div class="docker-section"><div class="docker-title">🐳 Docker Containers (' + docker.length + ')</div>';
+                    docker.forEach(c => {
+                        dockerHtml += '<div class="docker-container"><div style="font-weight: 600;">' + c.name + '</div><div style="color: #888; font-size: 10px;">Image: ' + c.image + '</div><div style="color: ' + (c.state === 'Running' ? '#28a745' : '#dc3545') + '; font-size: 10px;">' + c.state + ' - ' + c.status + '</div></div>';
+                    });
+                    dockerHtml += '</div>';
+                }
+                document.getElementById('docker-container').innerHTML = dockerHtml;
+
+                let systemdHtml = '';
+                if (systemd && systemd.length > 0) {
+                    systemdHtml = '<div class="systemd-section"><div class="systemd-title">⚙️ Systemd Services (' + systemd.length + ')</div>';
+                    systemd.forEach(s => {
+                        let stateClass = s.state === 'active' ? 'service-state-active' : 'service-state-inactive';
+                        systemdHtml += '<div class="systemd-service"><div style="font-weight: 600;">' + s.name + '</div><div class="' + stateClass + '">' + s.state + ' (' + s.sub_state + ')</div></div>';
+                    });
+                    systemdHtml += '</div>';
+                }
+                document.getElementById('systemd-container').innerHTML = systemdHtml;
+
                 document.getElementById('refresh-time').textContent = new Date().toLocaleTimeString();
             })
             .catch(err => console.error('Refresh error:', err));
@@ -570,6 +652,14 @@ def api_pods():
 @app.route('/api/ollama')
 def api_ollama():
     return jsonify(get_ollama_pods())
+
+@app.route('/api/docker')
+def api_docker():
+    return jsonify(get_docker_containers())
+
+@app.route('/api/systemd')
+def api_systemd():
+    return jsonify(get_systemd_services())
 
 @app.route("/health")
 def health():
