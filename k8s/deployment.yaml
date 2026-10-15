@@ -31,8 +31,8 @@ spec:
       serviceAccountName: dashboard-sa
       containers:
       - name: k8s-dashboard
-        image: localhost/k8s-dashboard:latest
-        imagePullPolicy: Never
+        image: localhost:5000/k8s-dashboard:v24
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 5000
           name: http
@@ -113,5 +113,5 @@ spec:
   ports:
   - port: 5000
     targetPort: 5000
-    nodePort: 30080
+    nodePort: 30085
     name: http
