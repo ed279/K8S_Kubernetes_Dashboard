@@ -557,7 +557,16 @@ def dashboard():
                 if (ollama && ollama.length > 0) {
                     ollama.forEach((pod, idx) => {
                         const dropdownId = 'models-' + idx;
-                        ollamaHtml += '<div class="ollama-pod"><div style="display: flex; justify-content: space-between; align-items: center;"><div><div style="font-weight: 600;">' + pod.name + '</div><div style="color: #888; font-size: 10px;">GPU: ' + pod.gpu + '</div></div><button onclick="document.getElementById(\'' + dropdownId + '\').style.display = document.getElementById(\'' + dropdownId + '\').style.display === \'none\' ? \'block\' : \'none\'" style="padding: 4px 8px; background: #333; color: #fff; border: 1px solid #555; border-radius: 3px; cursor: pointer; font-size: 11px;">Models (' + (pod.llm_count ? pod.llm_count : 0) + ') ▼</button></div><div id="' + dropdownId + '" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid #333; font-size: 10px; max-height: 200px; overflow-y: auto;"><div style="color: #666;">No models loaded</div></div></div>';
+                        const modelCount = pod.model_count ? pod.model_count : 0;
+                        let modelsHtml = '';
+                        if (pod.models && pod.models.length > 0) {
+                            pod.models.forEach(model => {
+                                modelsHtml += '<div style="color: #4caf50; padding: 4px 0;">• ' + model + '</div>';
+                            });
+                        } else {
+                            modelsHtml = '<div style="color: #666;">No models loaded</div>';
+                        }
+                        ollamaHtml += '<div class="ollama-pod"><div style="display: flex; justify-content: space-between; align-items: center;"><div><div style="font-weight: 600;">' + pod.name + '</div><div style="color: #888; font-size: 10px;">GPU: ' + pod.gpu + ' | Port: ' + pod.port + '</div></div><button onclick="document.getElementById(\'' + dropdownId + '\').style.display = document.getElementById(\'' + dropdownId + '\').style.display === \'none\' ? \'block\' : \'none\'" style="padding: 4px 8px; background: #333; color: #fff; border: 1px solid #555; border-radius: 3px; cursor: pointer; font-size: 11px;">Models (' + modelCount + ') ▼</button></div><div id="' + dropdownId + '" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid #333; font-size: 10px; max-height: 200px; overflow-y: auto;">' + modelsHtml + '</div></div>';
                     });
                 } else {
                     ollamaHtml += '<div style="color: #888; font-size: 12px; padding: 8px;">No Ollama pods running</div>';
