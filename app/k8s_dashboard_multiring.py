@@ -149,6 +149,45 @@ def get_systemd_services():
         print(f"Systemd error: {e}", file=sys.stderr)
         return []
 
+def get_exposed_services():
+    """Get K8s services with external exposure (NodePort, LoadBalancer, Ingress)"""
+    if not v1:
+        return []
+    try:
+        services = []
+        svc_list = v1.list_service_for_all_namespaces()
+        for svc in svc_list.items:
+            namespace = svc.metadata.namespace
+            name = svc.metadata.name
+            svc_type = svc.spec.type
+            ports = svc.spec.ports or []
+
+            # Get NodePort and LoadBalancer services
+            if svc_type == 'NodePort':
+                for port in ports:
+                    services.append({
+                        'name': f'{namespace}/{name}',
+                        'type': 'NodePort',
+                        'protocol': port.protocol or 'TCP',
+                        'internal_port': port.target_port,
+                        'external_port': port.port,
+                        'node_port': port.node_port
+                    })
+            elif svc_type == 'LoadBalancer':
+                for port in ports:
+                    services.append({
+                        'name': f'{namespace}/{name}',
+                        'type': 'LoadBalancer',
+                        'protocol': port.protocol or 'TCP',
+                        'internal_port': port.target_port,
+                        'external_port': port.port,
+                        'node_port': None
+                    })
+        return services
+    except Exception as e:
+        print(f"Error in get_exposed_services: {e}", file=sys.stderr)
+        return []
+
 def get_cluster_metrics():
     """Get detailed resource metrics"""
     if not v1:
