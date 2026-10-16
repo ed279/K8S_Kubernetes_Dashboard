@@ -388,7 +388,7 @@ def dashboard():
     <header>
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>
-                <h1>⚙️ Kubernetes Dashboard</h1>
+                <h1>⚙️ Kubernetes Dashboard <span style='font-size: 14px; color: #888; font-weight: 400; margin-left: 10px;'>v15.2</span></h1>
                 <p>Real-time cluster overview - NUCUBT01 K8s</p>
             </div>
             <button id="pauseBtn" style="padding: 10px 20px; font-size: 14px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">⏸ Pause</button>
