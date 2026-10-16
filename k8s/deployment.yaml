@@ -31,7 +31,7 @@ spec:
       serviceAccountName: dashboard-sa
       containers:
       - name: k8s-dashboard
-        image: localhost:5000/k8s-dashboard:v47
+        image: localhost:5000/k8s-dashboard:v45
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 5000
