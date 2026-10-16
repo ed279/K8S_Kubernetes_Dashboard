@@ -386,6 +386,7 @@ def dashboard():
             <div class="chart-container"><canvas id="trendsChart" width="800" height="200"></canvas></div>
         </div>
         <div id="dashboard"></div>
+        <div id="ollama-container"></div>
         <div id="docker-container"></div>
         <div id="systemd-container"></div>
         <div class="refresh-time">Updated: <span id="refresh-time">--:--:--</span></div>
@@ -521,10 +522,11 @@ def dashboard():
                 fetch('/api/metrics').then(r=>r.json()).catch(e => ({error: e.message})),
                 fetch('/api/alerts').then(r=>r.json()).catch(e => []),
                 fetch('/api/pods').then(r=>r.json()).catch(e => ({})),
+                fetch('/api/ollama').then(r=>r.json()).catch(e => []),
                 fetch('/api/docker').then(r=>r.json()).catch(e => []),
                 fetch('/api/systemd').then(r=>r.json()).catch(e => [])
             ])
-            .then(([m, a, p, docker, systemd]) => {
+            .then(([m, a, p, ollama, docker, systemd]) => {
                 if (m && !m.error) renderMetrics(m);
                 let alerts = (a && a.length > 0) ? '<div class="alerts-section"><div class="alerts-title">⚠️ Warnings: ' + a.length + '</div>' : '';
                 if (a && a.forEach) a.forEach((al, idx) => {
@@ -548,6 +550,18 @@ def dashboard():
                     });
                 }
                 document.getElementById('dashboard').innerHTML = pods;
+
+                let ollamaHtml = '<div class="ollama-section"><div class="ollama-title">🦙 Ollama Pods (' + (ollama ? ollama.length : 0) + ')</div>';
+                if (ollama && ollama.length > 0) {
+                    ollama.forEach((pod, idx) => {
+                        const dropdownId = 'models-' + idx;
+                        ollamaHtml += '<div class="ollama-pod"><div style="display: flex; justify-content: space-between; align-items: center;"><div><div style="font-weight: 600;">' + pod.name + '</div><div style="color: #888; font-size: 10px;">GPU: ' + pod.gpu + '</div></div><button onclick="document.getElementById(\'' + dropdownId + '\').style.display = document.getElementById(\'' + dropdownId + '\').style.display === \'none\' ? \'block\' : \'none\'" style="padding: 4px 8px; background: #333; color: #fff; border: 1px solid #555; border-radius: 3px; cursor: pointer; font-size: 11px;">Models (' + (pod.llm_count ? pod.llm_count : 0) + ') ▼</button></div><div id="' + dropdownId + '" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid #333; font-size: 10px; max-height: 200px; overflow-y: auto;"><div style="color: #666;">No models loaded</div></div></div>';
+                    });
+                } else {
+                    ollamaHtml += '<div style="color: #888; font-size: 12px; padding: 8px;">No Ollama pods running</div>';
+                }
+                ollamaHtml += '</div>';
+                document.getElementById('ollama-container').innerHTML = ollamaHtml;
 
                 let dockerHtml = '';
                 if (docker && docker.length > 0) {
