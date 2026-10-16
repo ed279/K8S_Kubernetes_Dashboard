@@ -389,6 +389,7 @@ def dashboard():
         <div id="ollama-container"></div>
         <div id="docker-container"></div>
         <div id="systemd-container"></div>
+        <div id="ports-container"></div>
         <div class="refresh-time">Updated: <span id="refresh-time">--:--:--</span></div>
         <div class="endpoints"><a href="/api/pods" target="_blank">pods</a><a href="/api/metrics" target="_blank">metrics</a><a href="/api/alerts" target="_blank">alerts</a><a href="/api/ollama" target="_blank">ollama</a><a href="/api/docker" target="_blank">docker</a><a href="/api/systemd" target="_blank">systemd</a></div>
     </div>
@@ -524,9 +525,10 @@ def dashboard():
                 fetch('/api/pods').then(r=>r.json()).catch(e => ({})),
                 fetch('/api/ollama').then(r=>r.json()).catch(e => []),
                 fetch('/api/docker').then(r=>r.json()).catch(e => []),
-                fetch('/api/systemd').then(r=>r.json()).catch(e => [])
+                fetch('/api/systemd').then(r=>r.json()).catch(e => []),
+                fetch('/api/exposed-services').then(r=>r.json()).catch(e => [])
             ])
-            .then(([m, a, p, ollama, docker, systemd]) => {
+            .then(([m, a, p, ollama, docker, systemd, ports]) => {
                 if (m && !m.error) renderMetrics(m);
                 let alerts = (a && a.length > 0) ? '<div class="alerts-section"><div class="alerts-title">⚠️ Warnings: ' + a.length + '</div>' : '';
                 if (a && a.forEach) a.forEach((al, idx) => {
@@ -583,6 +585,18 @@ def dashboard():
                     systemdHtml += '</div>';
                 }
                 document.getElementById('systemd-container').innerHTML = systemdHtml;
+
+                let portsHtml = '<div style="background: #1a1a1a; padding: 15px; border-left: 4px solid #2196f3; margin-bottom: 20px; border-radius: 4px;"><div style="font-size: 14px; font-weight: 600; color: #2196f3; margin-bottom: 15px;">🌐 Exposed Services (' + (ports ? ports.length : 0) + ')</div>';
+                if (ports && ports.length > 0) {
+                    ports.forEach(p => {
+                        const externalUrl = 'http://10.0.9.99:' + p.node_port;
+                        portsHtml += '<div style="background: #252525; padding: 12px; margin-bottom: 8px; border-radius: 4px; border: 1px solid #333;"><div style="font-weight: 600;">' + p.name + '</div><div style="font-size: 11px; color: #2196f3;"><a href="' + externalUrl + '" target="_blank" style="color: #2196f3; text-decoration: none;">' + externalUrl + '</a></div><div style="font-size: 11px; color: #888;">Internal: ' + p.internal_port + '</div></div>';
+                    });
+                } else {
+                    portsHtml += '<div style="color: #888; font-size: 12px; padding: 8px;">No exposed services</div>';
+                }
+                portsHtml += '</div>';
+                document.getElementById('ports-container').innerHTML = portsHtml;
 
                 document.getElementById('refresh-time').textContent = new Date().toLocaleTimeString();
             })
@@ -674,6 +688,10 @@ def api_docker():
 @app.route('/api/systemd')
 def api_systemd():
     return jsonify(get_systemd_services())
+
+@app.route('/api/exposed-services')
+def api_exposed_services():
+    return jsonify(get_exposed_services())
 
 @app.route("/health")
 def health():
